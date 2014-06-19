@@ -3,5 +3,6 @@ Release
 ipch
 *.opensdf
 *.sdf
+*.suo
 unccz/Debug
 unccz/Release
