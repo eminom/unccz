@@ -1,7 +1,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <string>
 #include "zlib.h"
 
 #define CC_HOST_IS_BIG_ENDIAN (bool)(*(unsigned short *)"\0\xff" < 0x100) 
@@ -92,12 +92,14 @@ int ccInflateCCZFile(const char *path, unsigned char **out)
     else if( header->sig[0] == 'C' && header->sig[1] == 'C' && header->sig[2] == 'Z' && header->sig[3] == 'p' )
     {
 		printf("failed to to so\n");
-		abort();
+		delete [] compressed;
+		return -1;
     }
     else
     {
         printf("cocos2d: Invalid CCZ file");
-		abort();
+		delete [] compressed;
+		return -1;
     }
     
     unsigned int len = CC_SWAP_INT32_BIG_TO_HOST(header->len);
@@ -126,7 +128,7 @@ int ccInflateCCZFile(const char *path, unsigned char **out)
     return len;
 }
 
-void writeToFile(const char *path, unsigned char *buffer, int length)
+bool writeToFile(const char *path, unsigned char *buffer, int length)
 {
 	if (FILE *fout = fopen(path, "wb"))
 	{
@@ -142,12 +144,49 @@ void writeToFile(const char *path, unsigned char *buffer, int length)
 			written += thisTerm;
 		}
 		fclose(fout);
+		return true;
 	}
+	return false;
 }
 
-int main()
+bool parseOutName(const std::string &inname, std::string &outname)
+{
+	const char *ending = ".ccz";
+	int len0 = strlen(ending);
+	if(inname.size() >= len0 && !strcmp(inname.c_str() + (inname.size() - len0), ending))
+	{
+		char buf[BUFSIZ+1024];
+		strcpy(buf, inname.c_str());
+		strcpy(buf + (inname.size() - len0), "");
+		outname = buf;
+		return true;
+	}
+	return false;
+}
+
+int main(int argc, char **argv)
 {
 	unsigned char *buffer = NULL;
-	int length = ccInflateCCZFile("k.pvr.ccz", &buffer);
-	writeToFile("k.pvr", buffer, length);
+	if( argc < 2 ){
+		printf("unccz [input file]\n");
+		return -1;
+	}
+
+	std::string inname = argv[1];
+	std::string outname;
+	if( !parseOutName(inname, outname) ){
+		printf("input file name must ends with .ccz\n");
+		return -1;
+	}
+
+	int length = ccInflateCCZFile(inname.c_str(), &buffer);
+	if( length < 0 ){
+		fprintf(stderr,"error inflating ccz file\n");
+		return -1;
+	}
+	if( ! writeToFile(outname.c_str(), buffer, length) ){
+		fprintf(stderr, "saving file error\n");
+		return -1;
+	}
+	return 0;
 }
