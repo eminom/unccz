@@ -4,5 +4,7 @@ ipch
 *.opensdf
 *.sdf
 *.suo
+*.ccz
+*.pvr
 unccz/Debug
 unccz/Release
